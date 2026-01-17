@@ -2,13 +2,14 @@
 package proxy
 
 import (
+	"balancr/internal/pool"
 	"io"
 	"log"
 	"net"
 )
 
-func SetupProxy(clientConn net.Conn) {
-	conn, err := net.Dial("tcp", "localhost:9090")
+func SetupProxy(clientConn net.Conn, pools *pool.ServerPool) {
+	conn, err := net.Dial("tcp", pools.GetNext())
 	if err != nil {
 		log.Print(err)
 		return
@@ -16,4 +17,5 @@ func SetupProxy(clientConn net.Conn) {
 	defer conn.Close()
 	go io.Copy(conn, clientConn)
 	io.Copy(clientConn, conn)
+
 }
