@@ -2,19 +2,21 @@ package main
 
 import (
 	"balancr/internal/config"
+	"balancr/internal/logger"
+	"balancr/internal/metrics"
 	"balancr/internal/pool"
 	"balancr/internal/proxy"
-	"log"
+	"fmt"
 	"net"
 	"time"
 )
 
-func startServer() {
+func startServer(m *metrics.Metrics) {
 	listener, err := net.Listen("tcp", "localhost:7000")
 	if err != nil {
-		log.Print(err)
+		logger.Log(err.Error(), "ERROR")
 	}
-	log.Print("Listening to port 7000")
+	logger.Log("Listening to port 7000", "INFO")
 
 	backends := config.GetBackends()
 
@@ -35,12 +37,23 @@ func startServer() {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Print(err)
+			logger.Log(err.Error(), "ERROR")
 		}
-		go proxy.SetupProxy(conn, serverPool)
+		go proxy.SetupProxy(conn, serverPool, m)
+	}
+}
+
+func serverMetrics(m *metrics.Metrics) {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		logger.Log(fmt.Sprint(m.GetMetrics()), "INFO")
 	}
 }
 
 func main() {
-	startServer()
+	var m = &metrics.Metrics{}
+	go serverMetrics(m)
+	startServer(m)
+
 }

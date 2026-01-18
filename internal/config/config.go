@@ -2,9 +2,9 @@
 package config
 
 import (
+	"balancr/internal/logger"
 	"balancr/internal/pool"
 	"io/ioutil"
-	"log"
 
 	"gopkg.in/yaml.v3"
 )
@@ -16,13 +16,16 @@ type configFile struct {
 func GetBackends() []*pool.Backend {
 	data, err := ioutil.ReadFile("config.yaml")
 	if err != nil {
-		log.Fatal("Error loading the yaml file")
+		logger.Log("Error loading the yaml file", "ERROR")
+		return nil
 	}
 	var cfg configFile
 
 	err = yaml.Unmarshal(data, &cfg)
 	if err != nil {
-		log.Fatal("Error parsing the yaml")
+		logger.Log("Error parsing the yaml", "ERROR")
+		return nil
+
 	}
 	return cfg.Backends
 }

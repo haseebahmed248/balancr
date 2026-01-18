@@ -2,6 +2,7 @@
 package pool
 
 import (
+	"balancr/internal/logger"
 	"fmt"
 	"net"
 	"sync"
@@ -32,6 +33,7 @@ func GetServerPool(backend []*Backend) *ServerPool {
 // SetAlive
 func SetAlive(backend *Backend) {
 	backend.Alive = true
+	logger.Log(backend.URL+" is back up", "INFO")
 }
 
 // IsAlive GET
@@ -40,6 +42,7 @@ func IsAlive(backend *Backend) bool {
 	backend.mu.Lock()
 	if err != nil {
 		backend.Alive = false
+		logger.Log(backend.URL+" is down ", "WARN")
 		backend.mu.Unlock()
 		return false
 	}
