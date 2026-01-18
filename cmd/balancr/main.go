@@ -1,6 +1,7 @@
 package main
 
 import (
+	"balancr/internal/config"
 	"balancr/internal/pool"
 	"balancr/internal/proxy"
 	"log"
@@ -15,12 +16,15 @@ func startServer() {
 	}
 	log.Print("Listening to port 7000")
 
-	backends := [...]string{"localhost:9999", "localhost:9998", "localhost:9997"}
+	backends := config.GetBackends()
+
 	data := make([]*pool.Backend, len(backends))
 	for i, backend := range backends {
 		data[i] = &pool.Backend{
-			URL:   backend,
-			Alive: true,
+			URL:    backend.URL,
+			Weight: backend.Weight,
+			Quota:  backend.Weight,
+			Alive:  true,
 		}
 		pool.IsAlive(data[i])
 	}

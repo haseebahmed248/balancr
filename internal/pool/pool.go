@@ -9,9 +9,11 @@ import (
 )
 
 type Backend struct {
-	URL   string
-	Alive bool
-	mu    sync.Mutex
+	URL    string `yaml:"url"`
+	Weight int    `yaml:"weight"`
+	Alive  bool
+	Quota  int
+	mu     sync.Mutex
 }
 
 type ServerPool struct {
@@ -63,22 +65,40 @@ func (p *ServerPool) HealthCheck(interval time.Duration) {
 
 }
 
+func resetQuota(backends []*Backend) {
+	for _, backend := range backends {
+		backend.Quota = backend.Weight
+	}
+}
+
 // GetNext returns next server (round-robin)
 func (p *ServerPool) GetNext() (string, error) {
 	p.mu.RLock()
 	counter := 0
+	var hasAlive bool
 	defer p.mu.RUnlock()
 	for {
-		if counter == len(p.Backend) {
-			return "", fmt.Errorf("No backend is alive")
-		}
 		backend := p.Backend[p.current]
-
-		if backend.Alive != false {
+		if counter == len(p.Backend) {
+			if hasAlive == false {
+				return "", fmt.Errorf("No backend is alive")
+			} else {
+				resetQuota(p.Backend)
+				counter = 0
+				hasAlive = false
+				continue // restart the loop
+			}
+		}
+		if backend.Alive != false && backend.Quota > 0 {
+			hasAlive = true
 			p.current = (p.current + 1) % len(p.Backend)
+			backend.Quota--
 			return backend.URL, nil
 		} else {
 			p.current = (p.current + 1) % len(p.Backend)
+			if backend.Alive {
+				hasAlive = true
+			}
 		}
 		counter++
 	}

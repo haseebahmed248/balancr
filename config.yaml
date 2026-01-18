@@ -1,0 +1,9 @@
+# config.yaml
+
+backends:
+  - url: "localhost:9999"
+    weight: 3
+  - url: "localhost:9998"
+    weight: 1
+  - url: "localhost:9997"
+    weight: 2
