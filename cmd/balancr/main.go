@@ -6,19 +6,20 @@ import (
 	"balancr/internal/metrics"
 	"balancr/internal/pool"
 	"balancr/internal/proxy"
+	"flag"
 	"fmt"
 	"net"
 	"time"
 )
 
-func startServer(m *metrics.Metrics) {
-	listener, err := net.Listen("tcp", "localhost:7000")
+func startServer(m *metrics.Metrics, port int, config_file string, health_interval int) {
+	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		logger.Log(err.Error(), "ERROR")
 	}
-	logger.Log("Listening to port 7000", "INFO")
+	logger.Log(fmt.Sprintf("Listening to port %d", port), "INFO")
 
-	backends := config.GetBackends()
+	backends := config.GetBackends(config_file)
 
 	data := make([]*pool.Backend, len(backends))
 	for i, backend := range backends {
@@ -32,7 +33,7 @@ func startServer(m *metrics.Metrics) {
 	}
 	serverPool := pool.GetServerPool(data)
 
-	go serverPool.HealthCheck(10 * time.Second)
+	go serverPool.HealthCheck(time.Duration(health_interval) * time.Second)
 
 	for {
 		conn, err := listener.Accept()
@@ -43,8 +44,8 @@ func startServer(m *metrics.Metrics) {
 	}
 }
 
-func serverMetrics(m *metrics.Metrics) {
-	ticker := time.NewTicker(10 * time.Second)
+func serverMetrics(m *metrics.Metrics, metrics_interval int) {
+	ticker := time.NewTicker(time.Duration(metrics_interval) * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
 		logger.Log(fmt.Sprint(m.GetMetrics()), "INFO")
@@ -52,8 +53,14 @@ func serverMetrics(m *metrics.Metrics) {
 }
 
 func main() {
+
+	port := flag.Int("port", 7000, "port on which proxy will run")
+	config := flag.String("config", "config.yaml", "Your config.yaml file which holds the backends")
+	health_interval := flag.Int("health-interval", 10, "Interval after which server health will be checked")
+	metrics_interval := flag.Int("metrics-interval", 10, "Interval after which metrics will be displayed")
+	flag.Parse()
 	var m = &metrics.Metrics{}
-	go serverMetrics(m)
-	startServer(m)
+	go serverMetrics(m, *metrics_interval)
+	startServer(m, *port, *config, *health_interval)
 
 }

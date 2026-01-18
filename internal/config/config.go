@@ -13,8 +13,8 @@ type configFile struct {
 	Backends []*pool.Backend `yaml:"backends"`
 }
 
-func GetBackends() []*pool.Backend {
-	data, err := ioutil.ReadFile("config.yaml")
+func GetBackends(configfile string) []*pool.Backend {
+	data, err := ioutil.ReadFile(configfile)
 	if err != nil {
 		logger.Log("Error loading the yaml file", "ERROR")
 		return nil
